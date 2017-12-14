@@ -1,42 +1,64 @@
-myFoldl f acc [] = acc
-myFoldl f acc (x:xs) = myFoldl f (f acc x) xs
-myFoldr f acc [] = acc
-myFoldr f acc (x:xs) = f x (myFoldr f acc xs)
-myMapL :: (a -> b) -> [a] -> [b]
-myMapL f xs = reverse $ foldl (\acc x -> (f x) : acc) [] xs
-myMapR :: (a -> b) -> [a] -> [b]
-myMapR f xs = foldr (\x acc -> (f x) : acc) [] xs
-myFlatMapL :: (a -> [b]) -> [a] -> [b]
-myFlatMapL f xs = reverse $ foldl (\acc x -> (f x) ++ acc) [] xs
-myFlatMapR :: (a -> [b]) -> [a] -> [b]
-myFlatMapR f xs = foldr (\x acc -> (f x) ++ acc) [] xs
-myConcatL :: [a] -> [a] -> [a]
-myConcatL a b = foldl (\acc x -> acc ++ [x]) a b
-myConcatR :: [a] -> [a] -> [a]
-myConcatR a b = foldr (:) b a
-myFilterL :: (a -> Bool) -> [a] -> [a]
-myFilterL bool_func xs = foldl (\acc x -> if bool_func x then acc ++ [x] else acc) [] xs
-myFilterR :: (a -> Bool) -> [a] -> [a]
-myFilterR bool_func xs = foldr (\x acc -> if bool_func x then x : acc else acc) [] xs
-myMaxByL :: (a -> Integer) -> [a] -> a
-myMaxByL key_f xs = foldl (\acc x -> if key_f x > key_f acc then x else acc) (head xs) xs
-myMaxByR :: (a -> Integer) -> [a] -> a
-myMaxByR key_f xs = foldr (\x acc -> if key_f x > key_f acc then x else acc) (last xs) xs
-myMinByL :: (a -> Integer) -> [a] -> a
-myMinByL key_f xs = foldl (\acc x -> if key_f x < key_f acc then x else acc) (head xs) xs
-myMinByR :: (a -> Integer) -> [a] -> a
-myMinByR key_f xs = foldr (\x acc -> if key_f x < key_f acc then x else acc) (last xs) xs
-myReverseL :: [a] -> [a]
-myReverseL xs = foldl (\acc x -> x : acc) [] xs
-myReverseR :: [a] -> [a]
-myReverseR xs = foldr (\x acc -> acc ++ [x]) [] xs
-myElementAtL :: Integer -> [a] -> a
-myElementAtL n xs = head $ foldl (\acc _ -> tail acc) xs $ replicate (fromIntegral n) 0
-myElementAtR :: Integer -> [a] -> a
-myElementAtR n xs = head $ foldr (\_ acc -> tail acc) xs $ replicate (fromIntegral n) 0
+
+my_foldr :: (a -> b -> b) -> b -> [a] -> b
+my_foldr f x [] = x
+my_foldr f x (h : t) = f h (my_foldr f x t)
+
+my_foldl :: (b -> a -> b) -> b -> [a] -> b
+my_foldl f x [] = x
+my_foldl f x (h : t) = my_foldl f (f x h) t
 
 
-myIndexOfL :: String -> [String] -> Integer
-myIndexOfL s xs = foldl (\acc x -> if s == snd x then fst x else acc) (-1) (zip [0..] xs)
-myIndexOfR :: String -> [String] -> Integer
-myIndexOfR s xs = foldr (\x acc -> if s == snd x then fst x else acc) (-1) (zip [0..] xs)
+my_map :: (a -> b) -> [a] -> [b]
+my_map _ [] = []
+my_map f list = my_foldr (\h t -> (f h):t) [] list
+
+
+my_flatMap :: (a -> [b]) -> [a] -> [b]
+my_flatMap _ [] = []
+my_flatMap f list = my_foldr (\h t -> (f h) ++ t) [] list
+
+
+my_concat :: [a] -> [a] -> [a]
+my_concat [] [] = []
+my_concat list1 list2 = my_foldr (\h t -> h:t) list2 list1
+
+
+my_filter :: (a -> Bool) -> [a] -> [a]
+my_filter _ [] = []
+my_filter f list = my_foldr (\h t -> if (f h) then (h:t) else t) [] list
+
+-- maxBy
+my_maxBy :: (a -> Integer) -> [a] -> a
+my_maxBy f list = let hl = head list in 
+                  my_foldr (\h max -> if (f h) > (f max) then h else max) hl list
+
+-- minBy
+my_minBy :: (a -> Integer) -> [a] -> a
+my_minBy f list = let hl = head list in 
+                  my_foldl (\min h -> if (f h) < (f min) then h else min) hl list
+
+
+my_reverse :: [a] -> [a]
+my_reverse [] = []
+my_reverse list = my_foldl (\t h -> h:t) [] list
+
+
+my_elementAt :: Integer -> [a] -> a
+my_elementAt index (h:t) = res
+                           where (_, res) = my_foldl (\ind_pair h -> let (cur_ind, value) = ind_pair in
+                                                                        if (cur_ind < index) then (cur_ind + 1, value)
+                                                                        else if (cur_ind == index) then (cur_ind + 1, h)
+                                                                        else (cur_ind, value)) (0, h) (h:t)
+
+
+my_indexOf :: String -> [String] -> Integer
+my_indexOf str list = let pr = my_foldl (\ind_pair h -> let (index, flag) = ind_pair in 
+                                                        if (not flag) then if (h == str) then (index, True) else (index + 1, False)
+                                                        else ind_pair) (0, False) list in
+                                                        let (index, _) = pr in
+                                                        index
+
+test :: String -> String
+test str = show $ my_filter (\x -> if (x > 1) then True else False) [0, 1, 2, 3]
+
+main = interact test
